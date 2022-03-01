@@ -1,0 +1,307 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+
+<head>
+  <style>
+    body {
+      padding: 100px;
+      width: 1000px;
+      margin: auto;
+      text-align: left;
+      font-weight: 300;
+      font-family: 'Open Sans', sans-serif;
+      color: #121212;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+      font-family: 'Source Sans Pro', sans-serif;
+    }
+  </style>
+  <title>CS 184 Mesh Editor</title>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Source+Sans+Pro" rel="stylesheet">
+</head>
+
+
+<body>
+
+  <h1 align="middle">CS 184: Computer Graphics and Imaging, Spring 2020</h1>
+  <h1 align="middle">Project 2: Mesh Editor</h1>
+  <h2 align="middle">Abhishek & Somya, CS184-284</h2>
+
+  <br><br>
+
+  <div>
+
+    <h2 align="middle">Overview</h2>
+    <p>This project was primarily focused on working with 3D objects and creating 3D meshes. We plot bezier curves and surfaces in section 1.
+      We conducted mesh operations such as edge split and edge flip in section 2. Finally, in section 3 we apply shading effects to objects. The previous parts 1-5 surved as a precursor to
+      the largest part of the project in part 6 where we apply the functions and techniques from before into building a nice upsampling algorithm.
+      Through this project, we got better at understanding triangle geometry through using the halfedge data structure introduced in class.
+      We also learned how preprocessing and upsampling can help to depict a visual effect that we want our underlying image to look like.
+
+    </p>
+
+    <h2 align="middle">Section I: Bezier Curves and Surfaces</h2>
+
+    <h3 align="middle">Part 1: Bezier curves with 1D de Casteljau subdivision</h3>
+
+    <p>Casteljau’s algorithm allows us to avoid recomputing the basis and evaluating coordinates at t by instead recursively doing linear interpolations between control points to calculate the Bezier curve. In studentcode::evaluateStep, we computed one level of this recursive function that takes a list of 2D vectors and linearly interpolates consecutive pairs. This function is called repeatedly to create fewer and fewer intermediate control points until there is only 1 point remaining. This point defines the Bezier curve.
+    </p>
+
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/6controlpoint.png" align="middle" width="400px" />
+            <figcaption align="middle">Original 6 Points</figcaption>
+          </td>
+          <td>
+            <img src="images/1stiteration.png" align="middle" width="400px" />
+            <figcaption align="middle">First Iteration</figcaption>
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/2nditeration.png" align="middle" width="400px" />
+            <figcaption align="middle">Second Iteration</figcaption>
+          </td>
+          <td>
+            <img src="images/3rditeration.png" align="middle" width="400px" />
+            <figcaption align="middle">Third Iteration</figcaption>
+          </td>
+        </tr>
+        <tr>
+          <td>
+            <img src="images/4thiteration.png" align="middle" width="400px" />
+            <figcaption align="middle">Fourth Iteration</figcaption>
+          </td>
+          <td>
+            <img src="images/5thiteration.png" align="middle" width="400px" />
+            <figcaption align="middle">Fifth Iteration</figcaption>
+          </td>
+        </tr>
+        <br>
+        <tr>
+          <td>
+            <img src="images/Drawingcurve.png" align="middle" width="400px" />
+            <figcaption align="middle">Drawing the Curve</figcaption>
+          </td>
+          <td>
+            <img src="images/ModifiedCurve.png" align="middle" width="400px" />
+            <figcaption align="middle">Modified Curve</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+
+    <h3 align="middle">Part 2: Bezier surfaces with separable 1D de Casteljau subdivision</h3>
+    <p>
+      Instead of 2D control points and one parameter t, Bezier surfaces use a NxN array of control points and two parameters u and v. Each 2D row of control points in u form Bezier curves that can then be connected to each other using control points in v. Our evaluate step for Bezier surfaces mimics that of curves, but the linear interpolation occurs for 3D control points instead. The evaluate1D function calls evaluate step and creates each of the individual Bezier curves. The evaluate function calls evaluate1D and collects a list of final interpolated vectors in u and finally the input controlpoints array to connect all curves along the v direction.
+    </p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/bezierteapot.png" align="middle" width="400px" />
+            <figcaption align="middle">Teapot rendered from Bezier surface</figcaption>
+          </td>
+          <td>
+        </tr>
+      </table>
+    </div> 
+
+
+
+    <h2 align="middle">Section II: Sampling</h2>
+
+    <h3 align="middle">Part 3: Average normals for half-edge meshes</h3>
+    <p>
+      Starting at a random half edge h, we find its source vertex. Then we find h->twin()’s source vertex, and h->next()->twin()’s vertex. Subtracting the positions of the consecutive vertices from each other we are able to find 2 edges of the same face. We take the cross product of these two edges to get the normal vector. We add this normal vector to a running sum variable called “normal” that aggregates the sum of all normal vectors. We advance the half edge h to its h->twin()->next() to reach a new face. We repeat the process continuously until we wind up at the same half_edge where we started.
+    </p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/beforenormalizing.png" align="middle" width="400px" />
+            <figcaption align="middle">Before Normalizing</figcaption>
+          </td>
+          <td>
+            <img src="images/afternormalizing.png" align="middle" width="400px" />
+            <figcaption align="middle">After Normalizing</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div> 
+    
+
+    <h3 align="middle">Part 4: Half-edge flip</h3>
+    <p>
+      We first ascribed variables to all the half edges and vertices within our two given faces. We created a handwritten drawing to assign all the variable names and relationships before and after the flip. Using the setneighbors() function we reassigned the next, twin, vertex, edge, and face of the two half edges that formed e0, which we called h0 and h3. We had to reassign faces and next values for some half edges, and reassign half edges to some vertices and faces. We did not run into any debugging problems or an eventful debugging journey, which can be attributed to how long we spent making sure our handwritten drawing labels exposed all pointers that needed reassigning. 
+    </p>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/beforeflipping.png" align="middle" width="400px" />
+            <figcaption align="middle">Before Flipping</figcaption>
+          </td>
+          <td>
+            <img src="images/afterflipping.png" align="middle" width="400px" />
+            <figcaption align="middle">After Flipping</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>  
+
+
+
+    <h3 align="middle">Part 5: Half-edge split</h3>
+    <p>
+      As we did for the edge flip in part 4, we created a thorough handwritten drawing to map changes in variables and pointers before and after the edge split operation. We repeated the same variable names as in part 4. We also had to create a lot of new elements, 
+      making sure the half edges around the outside edges did not change. 
+    </p>
+    <h3 align="left">Mesh before and after some edge splits</h3>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/beforesplitting.png" align="middle" width="400px" />
+            <figcaption align="middle">Before Splitting</figcaption>
+          </td>
+          <td>
+            <img src="images/afteredgesplits.png" align="middle" width="400px" />
+            <figcaption align="middle">After Splitting</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>  
+
+    <h3 align="left">Mesh before and after a combination of edge splits & edge flips</h3>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/edgesplitflipcombo1.png" align="middle" width="400px" />
+            <figcaption align="middle">Splitted and flipped meshes in the middle</figcaption>
+          </td>
+          <td>
+            <img src="images/edgesplitflipcombo2.png" align="middle" width="400px" />
+            <figcaption align="middle">Splitted and flipped meshes in the middle</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>  
+    <p>
+      Debugging Journey: We were accidentally reassigning a half edges next() to an incorrect half edge which caused 2 overlapping half edges and 1 missing half edge when we hovered over the teapot mesh. We also forgot to reassign the half edges corresponding to our 4 faces after doing the split, which caused some black holes to appear in our mesh after conducting splits. We also found that while calculating m’s position, we could not weight the vertex a, b positions by 1/2 , instead we had to use 0.5. 
+
+    </p>
+
+
+    <h3 align="middle">Part 6: Loop subdivision for mesh upsampling</h3>
+    <p>
+      There are times where we often wish to convert a coarse polygon mesh into a high-resolution one for better display 
+      and more accurate simulation. In this final section, we will implement a mesh upsampling method that nicely approximates 
+      the original mesh data known as loop subdivision to solve this problem. Loop subdivision upsamples a mesh by 1) 
+      subdividing each of its triangles into four smaller triangles and 2) updating vertices of subdivided mesh based on some 
+      weighting scheme. A single loop subdivision consists of these two steps. As we repeatedly apply these two steps, 
+      we will converge to a smooth approximation of our original mesh. To implement the loop subdivision algorithm, we 
+      closely followed the approach suggested in the project spec. To perform 4-1 subdivisions over the entire mesh, we 
+      use the edge flip and edge split operations we defined in the previous part. We split every existing edge in the mesh 
+      in any order and then we flip any new edge that connects an old vertex and a new vertex. 
+      Finally, we copy the new vertex positions into the final vertex position. 
+      During implementation, we found that it was difficult to keep track of which edges are new and which 
+      edges are old within the upsampling method itself. As a result, we decided to mark edges in 
+      the splitEdge function from part 5 to help us with this process. 
+      Furthermore, debugging part 6 was one of the more difficult things to debug. 
+      It was difficult to visualize which vertices/edges we were modifying. 
+      To solve this, we used many cout statements to log where we were in the code to the console and ensure that we weren’t hitting any infinite loops.
+
+    </p>
+
+    <h3 align="left">Upsampling cube.dae</h3>
+    <p> After looking at how upsampling affects this image, we see that the more upsampled an image is, sharper corners and edges become rounded and smoother. In place of those sharp corners, are rounded “bumps”. 
+      Furthermore, we can see that the cube becomes more and more asymmetrical as we keep upsampling.</p>
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+            <td>
+              <img src="images/cube0x.png" align="middle" width="400px" />
+              <figcaption align="middle">Upsampling 0x</figcaption>
+            </td>
+            <td>
+              <img src="images/cube1x.png" align="middle" width="400px" />
+              <figcaption align="middle">Upsampling 1x</figcaption>
+            </td>
+          </tr>
+          <br>
+          <tr>
+            <td>
+              <img src="images/cube2x.png" align="middle" width="400px" />
+              <figcaption align="middle">Upsampling 2x</figcaption>
+            </td>
+            <td>
+              <img src="images/cube3x.png" align="middle" width="400px" />
+              <figcaption align="middle">Upsampling 3x</figcaption>
+            </td>
+          </tr>
+        </table>
+      </div>
+    <h3 align="left">Upsampling cube.dae along with pre splitting</h3>
+    <p> Unlike above, if we choose to pre-split the faces of the cube, we achieve a more symmetrical shape that more closely resembles a rounded cubical figure. These effects likely occur because, when we pre-split the edges, we calculate even more sampling points which the upsampling algorithm can use to create a more symmetrical image. </p>
+      <div align="middle">
+        <table style="width=100%">
+          <tr>
+            <td>
+              <img src="images/cube0xps.png" align="middle" width="400px" />
+              <figcaption align="middle">Pre-split Upsampling 0x</figcaption>
+            </td>
+            <td>
+              <img src="images/cube1xps.png" align="middle" width="400px" />
+              <figcaption align="middle">Pre-split Upsampling 1x</figcaption>
+            </td>
+          </tr>
+          <br>
+          <tr>
+            <td>
+              <img src="images/cube2xps.png" align="middle" width="400px" />
+              <figcaption align="middle">Pre-split Upsampling 2x</figcaption>
+            </td>
+            <td>
+              <img src="images/cube3xps.png" align="middle" width="400px" />
+              <figcaption align="middle">Pre-split Upsampling 3x</figcaption>
+            </td>
+          </tr>
+        </table>
+      </div>  
+    <h3 align="left">Another example of upsampling: </h3>
+    <div align="middle">
+      <table style="width=100%">
+        <tr>
+          <td>
+            <img src="images/beast0x.png" align="middle" width="400px" />
+            <figcaption align="middle">Beast Upsampling 0x</figcaption>
+          </td>
+          <td>
+            <img src="images/beast1x.png" align="middle" width="400px" />
+            <figcaption align="middle">Beast Upsampling 1x</figcaption>
+          </td>
+        </tr>
+      </table>
+    </div>  
+
+
+
+    <h2 align="middle">Section III: Optional Extra Credit</h2>
+    <p>If you are not participating in the optional mesh competition, don't worry about this section!</p>
+
+    <h3 align="middle">Part 7: Design your own mesh!</h3>
+
+</body>
+
+</html>
